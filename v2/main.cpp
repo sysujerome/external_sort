@@ -1,72 +1,4 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-// #include <priority_queue>
-#include <queue>
-#include <sstream>
-#include <fstream>
-#include <string>
-
-
-using namespace std;
-
-constexpr int mem_size = 1000;
-constexpr int file_size = 9000;
-constexpr int merge_way = 3;
-constexpr int data_range = 1000000;
-
-string inFile = "./unsorted_data";
-string outFile = "./sorted_data";
-const char* input_file_name = inFile.c_str();
-const char* output_file_name = outFile.c_str();
-
-
-typedef struct HeapNode {
-    int index;
-    int pos;
-    int value;
-    HeapNode(int i, int p, int v) {
-        index = i;
-        pos = p;
-        value = v;
-    }
-} HeapNode;
-
-struct comp {
-    bool operator() (HeapNode p1, HeapNode p2)
-    {
-        return p1.value > p2.value;
-    }
-};
-static bool cmp(HeapNode p1, HeapNode p2)
-{
-    return p1.value > p2.value;
-}
-
-auto compare = [](HeapNode p1, HeapNode p2) { return p1.value > p2.value ; };
-
-void print(vector<int>& nums)
-{
-    for (auto num : nums) cout << num << " ";
-    cout << endl;
-}
-
-void print(vector<vector<int>>& nums)
-{
-    for (auto num : nums) print(num);
-}
-
-void print(vector<vector<vector<int>>>& nums)
-{
-    cout << " ------------------------------- "<< endl;
-    for (int i = 0; i < nums.size(); ++i)
-    {
-        cout << i << ":" << endl;
-        print(nums[i]);
-    }
-    cout << " ------------------------------- "<< endl << endl;
-}
-
+#include "util.h"
 
 void create_data(const char* input_file, int file_size)
 {
@@ -78,18 +10,18 @@ void create_data(const char* input_file, int file_size)
     while (file_current_size < file_size)
     {
         wordSize = rand()%10+1;
-        if (file_current_size + wordSize < file_size)
+        if (file_current_size + wordSize <= file_size)
         {
-            cout << file_current_size << " ";
             for (int i = 0; i < wordSize; ++i)
             {
                 letter = 'a'+rand()%26;
                 outFile << letter;
             }
             file_current_size += wordSize;
-            if (file_current_size+wordSize != file_size)
+            // cout << file_current_size << " ";
+            if (file_current_size < file_size)
             {
-                outFile << ' ';
+                outFile << '\n';
                 ++file_current_size;
             }
         }
@@ -100,34 +32,43 @@ void create_data(const char* input_file, int file_size)
 
 
 
-void get_file_content(vector<vector<vector<int>>>& files, vector<int>& content, int pass, int runs, int begin, int size)
+void get_file_content(ifstream& input_file, vector<string>& content, int size)
 {
     content.clear();
-    int pos = begin, len = 0;
-
-    while (pos < files[pass][runs].size() and len < size)
+    if (input_file.eof()) return;
+    string line;
+    int len = 0;
+    while ( len <= size and !input_file.eof())
     {
-        content.push_back(files[pass][runs][pos]);
-        ++len;
-        ++pos;
+        getline(input_file, line);
+        len += line.length();
+        content.push_back(line);
     }
+
     return;
 }
 
-void merge(vector<vector<vector<int>>>& files, int pass, int begin, int end)
+
+
+void merge(int pass, int begin, int end)
 {
+    auto outFile_name = get_file_name(pass+1, begin/merge_way+1);
+    ofstream output_file(outFile_name.c_str());
+    vector<ifstream> input_files(merge_way);
+    for (int i = 0; i < input_files.size(); ++i)
+    {
+        const char* file_name = get_file_name(pass, begin+i+1).c_str();
+        input_files[i].open(file_name);
+    }
 
-
-    vector<int> output;
-
-    int size_merge = end-begin+1;
     int mem_part_size = mem_size / (merge_way+1);
-    files[pass+1].push_back({});
 
-    vector<vector<int>> content_in_memory(size_merge, vector<int>{});
+    vector<vector<string>> content_in_memory(merge_way, vector<string>{});
+    vector<string> output_memory;
+    vector<int> mem_size(merge_way+1, 0);
     for (int i = 0; i < merge_way; ++i)
     {
-        get_file_content(files, content_in_memory[i], pass, begin+i, 0, mem_part_size);
+        get_file_content(input_files[i], content_in_memory[i], mem_part_size);
     }
 
     priority_queue<HeapNode, vector<HeapNode>, decltype(compare)> que(compare);
@@ -136,81 +77,130 @@ void merge(vector<vector<vector<int>>>& files, int pass, int begin, int end)
         que.push(HeapNode(i, 0, content_in_memory[i][0]));
     }
 
+    int counter = 0;
+
     while (!que.empty())
     {
+        ++counter;
         auto node = que.top();
         int index = node.index;
         int pos = node.pos;
-        int value = node.value;
+        string value = node.value;
         que.pop();
-        output.push_back(value);
-        if (output.size() == mem_part_size)
+        output_memory.push_back(value);
+        if (output_memory.size() == mem_part_size)
         {
             // write back to memory
-            for (int i = 0; i < output.size(); ++i)
-                files[pass+1].back().push_back(output[i]);
-            output.clear();
+            for (int i = 0; i < output_memory.size(); ++i)
+            {
+                if (output_file.tellp() != 0) output_file << '\n';
+                output_file << output_memory[i];
+            }
+            // output_file << output_memory.back();
+            output_memory.clear();
+            // output_file.flush();
         }
         ++pos;
-        if (pos % mem_part_size == 0) {
-            get_file_content(files, content_in_memory[index], pass, index, pos, mem_part_size);
+        if (pos == content_in_memory[index].size() ) {
+            get_file_content(input_files[index], content_in_memory[index], mem_part_size);
+            pos = 0;
         }
         if (content_in_memory[index].empty()) continue;
-        int content_in_memory_pos = pos%mem_part_size;
-        que.push(HeapNode(index, pos, content_in_memory[index][content_in_memory_pos]));
+        que.push(HeapNode(index, pos, content_in_memory[index][pos]));
+    }
+    if (!output_memory.empty())
+    {
+        for (int i = 0; i < output_memory.size(); ++i)
+        {
+            if (output_file.tellp() != 0) output_file << '\n';
+            output_file << output_memory[i];
+        }
+            // output_file << output_memory.back();
+        output_memory.clear();
+    }
+
+    // cout << counter << endl;
+    output_file.close();
+    for (int i = 0; i < input_files.size(); ++i)
+    {
+        input_files[i].close();
     }
 }
 
-void external_sort(vector<int>& unsorted)
+
+
+void external_sort(const char* file)
 {
-    vector<vector<vector<int>>> files;
-    vector<vector<int>> tow_vector;
-    vector<int> single_vector;
-    files.push_back(tow_vector);
-    for (int i = 0; i < unsorted.size(); ++i)
+    int len = 0, runs = 0, pass = 0;
+    ifstream input(file);
+    vector<string> file_content;
+    while (!input.eof())
     {
-        single_vector.push_back(unsorted[i]);
-        if ((i+1) % mem_size == 0)
+        // cout << runs << endl;
+        string line;
+        file_content.clear();
+        getline(input, line);
+        len = 0;
+        while (len + line.length() <= mem_size)
         {
-            sort(single_vector.begin(), single_vector.end());
-            files[0].push_back(single_vector);
-            single_vector.clear();
+            file_content.push_back(line);
+            len += line.length()+1;
+            if (input.eof()) break;
+            getline(input, line);
         }
-    }
-    if (!single_vector.empty())
-    {
-        sort(single_vector.begin(), single_vector.end());
-        files[0].push_back(single_vector);
-    }
-    int pass = 0;
-
-
-    while (files.back().size() != 1)
-    {
-        files.push_back(tow_vector);
-        int begin = 0, end = merge_way-1;
-        while (end < files[pass].size())
+        sort(file_content.begin(), file_content.end());
+        
+        auto file_name = get_file_name(pass, runs+1);
+        ofstream output(file_name.c_str());
+        for (int i = 0; i < file_content.size()-1; ++i)
         {
-            merge(files, pass, begin, end);
-            begin = end+1, end = end + merge_way;
+            output << file_content[i] << endl;
         }
-        ++ pass;
+        output << file_content.back();
+        output.close();
+        ++runs;
     }
-    print(files.back()[0]);
+
+    // cout << endl;
+    // print(file_content);
+
+    int new_runs = 0;
+    while (runs > 1)
+    {
+        int begin = 0, end = merge_way < runs ? merge_way-1 : runs-1;
+        new_runs = 0;
+        while (end < runs)
+        {
+            merge(pass, begin, end);
+            begin = end+1, end = end+merge_way;
+            ++new_runs;
+        }
+        for (int i = 0; i < runs; ++i)
+        {
+            auto file_name = get_file_name(pass, i+1);
+            remove(file_name.c_str());
+        }
+        ++pass;
+        runs = new_runs;
+    }
+
     return;
 }
 
 
 int main() {
-    // vector<int> input(file_size, 0);
-    // for (int i = 0; i < file_size; ++i)
-    // {
-    //     input[i] = rand()%data_range+1;
-    // }
 
-    // external_sort(input);
+
     create_data(input_file_name, file_size);
 
+    cout << "sort begin..." << endl;
+    
+    const clock_t begin_time = clock();
+
+    external_sort(input_file_name);
+
+    float time_cost = clock()-begin_time;
+    cout << "Sort " << file_size << " B file took " << time_cost/CLOCKS_PER_SEC << " seconds" << endl; 
 
     return 0;
 }
