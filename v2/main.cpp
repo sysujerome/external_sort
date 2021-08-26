@@ -1,4 +1,104 @@
-#include "util.h"
+#include <iostream>
+#include <vector>
+#include <algorithm>
+// #include <priority_queue>
+#include <queue>
+#include <sstream>
+#include <fstream>
+#include <string>
+
+
+using namespace std;
+
+constexpr int mem_size = 1000;
+constexpr int file_size = 9000;
+constexpr int merge_way = 3;
+constexpr int data_range = 1000000;
+
+string inFile = "./unsorted_data";
+string outFile = "./sorted_data";
+const char* input_file_name = inFile.c_str();
+const char* output_file_name = outFile.c_str();
+
+
+typedef struct HeapNode {
+    int index;
+    int pos;
+    int value;
+    HeapNode(int i, int p, int v) {
+        index = i;
+        pos = p;
+        value = v;
+    }
+} HeapNode;
+
+struct comp {
+    bool operator() (HeapNode p1, HeapNode p2)
+    {
+        return p1.value > p2.value;
+    }
+};
+static bool cmp(HeapNode p1, HeapNode p2)
+{
+    return p1.value > p2.value;
+}
+
+auto compare = [](HeapNode p1, HeapNode p2) { return p1.value > p2.value ; };
+
+void print(vector<int>& nums)
+{
+    for (auto num : nums) cout << num << " ";
+    cout << endl;
+}
+
+void print(vector<vector<int>>& nums)
+{
+    for (auto num : nums) print(num);
+}
+
+void print(vector<vector<vector<int>>>& nums)
+{
+    cout << " ------------------------------- "<< endl;
+    for (int i = 0; i < nums.size(); ++i)
+    {
+        cout << i << ":" << endl;
+        print(nums[i]);
+    }
+    cout << " ------------------------------- "<< endl << endl;
+}
+
+
+void create_data(const char* input_file, int file_size)
+{
+    ofstream outFile;
+    outFile.open(input_file);
+    int file_current_size = 0;
+    int wordSize = 0;
+    char letter;
+    while (file_current_size < file_size)
+    {
+        wordSize = rand()%10+1;
+        if (file_current_size + wordSize < file_size)
+        {
+            cout << file_current_size << " ";
+            for (int i = 0; i < wordSize; ++i)
+            {
+                letter = 'a'+rand()%26;
+                outFile << letter;
+            }
+            file_current_size += wordSize;
+            if (file_current_size+wordSize != file_size)
+            {
+                outFile << ' ';
+                ++file_current_size;
+            }
+        }
+        if (file_current_size >= file_size) break;
+    }
+    outFile.close();
+}
+
+
 
 void get_file_content(vector<vector<vector<int>>>& files, vector<int>& content, int pass, int runs, int begin, int size)
 {
@@ -15,6 +115,8 @@ void get_file_content(vector<vector<vector<int>>>& files, vector<int>& content, 
 }
 
 void merge(vector<vector<vector<int>>>& files, int pass, int begin, int end)
+{
+
 
     vector<int> output;
 
@@ -100,13 +202,14 @@ void external_sort(vector<int>& unsorted)
 
 
 int main() {
-    vector<int> input(file_size, 0);
-    for (int i = 0; i < file_size; ++i)
-    {
-        input[i] = rand()%data_range+1;
-    }
+    // vector<int> input(file_size, 0);
+    // for (int i = 0; i < file_size; ++i)
+    // {
+    //     input[i] = rand()%data_range+1;
+    // }
 
-    external_sort(input);
+    // external_sort(input);
+    create_data(input_file_name, file_size);
 
 
     return 0;

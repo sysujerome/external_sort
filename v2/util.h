@@ -3,6 +3,9 @@
 #include <algorithm>
 // #include <priority_queue>
 #include <queue>
+#include <string>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
@@ -10,6 +13,11 @@ constexpr int mem_size = 1000;
 constexpr int file_size = 9000;
 constexpr int merge_way = 3;
 constexpr int data_range = 1000000;
+
+char* input_file_name = "./unsorted_data";
+char* output_file_name = "./sorted_data";
+
+
 
 typedef struct HeapNode {
     int index;
